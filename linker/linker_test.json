@@ -1,0 +1,19 @@
+{
+    "connections" : {
+        "db1" : {
+            "spec"    : "127.0.0.1:27017",
+            "db_name" : "blog",
+            "default" : true
+        },
+
+        "onther_db"   : {
+            "spec"    : "192.168.1.10:27017",
+            "db_name" : "users"
+        },
+
+        "cluster"     : {
+            "spec"    : "mongodb://10.0.0.10:27017,10.10.0.11:27017/",
+            "db_name" : "megastorage"
+        }
+    }
+}
