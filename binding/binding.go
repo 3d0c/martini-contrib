@@ -17,11 +17,11 @@ import (
 
 /*
 	To the land of Middle-ware Earth:
+
 		One func to rule them all,
 		One func to find them,
 		One func to bring them all,
 		And in this package BIND them.
-			- Sincerely, Sauron
 */
 
 // Bind accepts a copy of an empty struct and populates it with
@@ -98,28 +98,6 @@ func Form(formStruct interface{}) martini.Handler {
 // Json is middleware to deserialize a JSON payload from the request
 // into the struct that is passed in. The resulting struct is then
 // validated, but no error handling is actually performed here.
-//
-// func Json(jsonStruct interface{}) martini.Handler {
-// 	return func(context martini.Context, req *http.Request) {
-// 		ensureNotPointer(jsonStruct)
-// 		jsonStruct := reflect.New(reflect.TypeOf(jsonStruct))
-// 		errors := newErrors()
-//
-// 		if req.Body != nil {
-// 			defer req.Body.Close()
-// 		}
-//
-// 		content, err := ioutil.ReadAll(req.Body)
-// 		if err != nil {
-// 			errors.Overall[ReaderError] = err.Error()
-// 		} else if err = json.Unmarshal(content, jsonStruct.Interface()); err != nil {
-// 			errors.Overall[DeserializationError] = err.Error()
-// 		}
-//
-// 		validateAndMap(jsonStruct, context, errors)
-// 	}
-// }
-
 func Json(jsonStruct interface{}) martini.Handler {
 	return func(context martini.Context, req *http.Request) {
 		var payload map[string]interface{}
@@ -134,11 +112,9 @@ func Json(jsonStruct interface{}) martini.Handler {
 
 		content, err := ioutil.ReadAll(req.Body)
 		if err != nil {
-			errors.Overall[ReaderError] = err.Error()
+			errors.Overall[DeserializationError] = err.Error()
 		} else if err = json.Unmarshal(content, &payload); err != nil {
-			log.Println("Error unmarshalling json:", err)
-			// do not disclose internal errors
-			// errors.Overall[DeserializationError] = err.Error()
+			errors.Overall[DeserializationError] = err.Error()
 		}
 
 		typ := jsonStruct.Elem().Type()
@@ -396,7 +372,6 @@ type (
 const (
 	RequireError         string = "Required"
 	DeserializationError string = "DeserializationError"
-	ReaderError          string = "ReaderError"
 	IntegerTypeError     string = "IntegerTypeError"
 	BooleanTypeError     string = "BooleanTypeError"
 	FloatTypeError       string = "FloatTypeError"
