@@ -1,12 +1,12 @@
 package encoder
 
-// Borrowed from https://github.com/PuerkitoBio/martini-api-example
+// Original code borrowed from https://github.com/PuerkitoBio/martini-api-example
+// TextEncoder and XmlEncoder has been removed. If someone really needs it, let me know.
 
+// Supported tags:
+// 	 - "out" if it sets to "false", value won't be set to field
 import (
-	// "bytes"
 	"encoding/json"
-	// "encoding/xml"
-	// "fmt"
 	"reflect"
 )
 
@@ -75,42 +75,3 @@ func copyStruct(v reflect.Value, t reflect.Type) reflect.Value {
 
 	return result
 }
-
-type XmlEncoder struct{}
-
-// xmlEncoder is an Encoder that produces XML-formatted responses.
-/*
-func (_ XmlEncoder) Encode(v ...interface{}) (string, error) {
-	var buf bytes.Buffer
-	if _, err := buf.Write([]byte(xml.Header)); err != nil {
-		return "", err
-	}
-	if _, err := buf.Write([]byte("<albums>")); err != nil {
-		return "", err
-	}
-	b, err := xml.Marshal(v)
-	if err != nil {
-		return "", err
-	}
-	if _, err := buf.Write(b); err != nil {
-		return "", err
-	}
-	if _, err := buf.Write([]byte("</albums>")); err != nil {
-		return "", err
-	}
-	return buf.String(), nil
-}
-
-type TextEncoder struct{}
-
-// textEncoder is an Encoder that produces plain text-formatted responses.
-func (_ TextEncoder) Encode(v ...interface{}) (string, error) {
-	var buf bytes.Buffer
-	for _, v := range v {
-		if _, err := fmt.Fprintf(&buf, "%s\n", v); err != nil {
-			return "", err
-		}
-	}
-	return buf.String(), nil
-}
-*/
