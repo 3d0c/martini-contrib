@@ -6,6 +6,7 @@ package model
 //        inside specific adapters in the linker package.
 
 import (
+	"fmt"
 	"github.com/3d0c/martini-contrib/linker"
 	"labix.org/v2/mgo"
 	"labix.org/v2/mgo/bson"
@@ -35,6 +36,8 @@ type Query struct {
 	*mgo.Query
 }
 
+var qCache map[string]*Query
+
 type Iter struct {
 	*mgo.Iter
 }
@@ -56,6 +59,8 @@ func New(scheme interface{}, args ...interface{}) *Model {
 		this.collection = name.(string)
 	}
 
+	qCache = make(map[string]*Query, 0)
+
 	return this
 }
 
@@ -70,11 +75,70 @@ func (this *Model) Find(args ...interface{}) *Query {
 		query = prepareQuery(args[0])
 	}
 
-	q := &Query{scheme: this.scheme}
+	key := fmt.Sprintf("%v", query)
 
-	q.Query = linker.Get().MongoDB().C(this.collection).Find(query)
+	q, found := qCache[key]
+	if !found {
+		qCache[key] = &Query{scheme: this.scheme}
+		qCache[key].Query = linker.Get().MongoDB().C(this.collection).Find(query)
+
+		return qCache[key]
+	}
 
 	return q
+}
+
+func (this *Model) Expand(result interface{}, fieldTag string) {
+	resultv := reflect.ValueOf(result)
+
+	if resultv.Kind() == reflect.Ptr && resultv.Elem().Kind() == reflect.Struct {
+		this.expandField(getFieldByTag(reflect.TypeOf(result).Elem(), resultv, fieldTag))
+		return
+	}
+
+	if resultv.Kind() == reflect.Slice {
+		for i := 0; i < resultv.Len(); i++ {
+			this.expandField(getFieldByTag(reflect.TypeOf(result).Elem(), resultv.Index(i), fieldTag))
+		}
+		return
+	}
+
+	log.Println("Unable to expand. Unexpected type:", resultv.Kind())
+	return
+}
+
+func (this *Model) expandField(field reflect.Value, typ reflect.StructField) {
+	if !field.IsValid() {
+		log.Println("Unable to expand. Field for tag", field.Type().Name(), "not found.")
+		return
+	}
+
+	if !field.CanSet() {
+		log.Println("Unable to expand. Can't set field:", field.Type().Name())
+		return
+	}
+
+	if field.Kind() != reflect.Interface {
+		log.Println("Unable to expand. Field should be an interface,", field.Kind(), "given.")
+		return
+	}
+
+	r := this.Find(field.Elem().Interface().(bson.ObjectId)).One()
+
+	field.Set(reflect.ValueOf(r))
+}
+
+func getFieldByTag(typ reflect.Type, val reflect.Value, tag string) (reflect.Value, reflect.StructField) {
+	for i := 0; i < typ.NumField(); i++ {
+		if jsonTags := strings.Split(typ.Field(i).Tag.Get("json"), ","); jsonTags[0] == tag {
+			if val.Kind() == reflect.Ptr {
+				val = val.Elem()
+			}
+			return val.Field(i), typ.Field(i)
+		}
+	}
+
+	return reflect.Value{}, reflect.StructField{}
 }
 
 func (q *Query) Skip(n int) *Query {
@@ -162,6 +226,9 @@ func prepareQuery(i interface{}) interface{} {
 
 	case bson.ObjectId:
 		return bson.M{"_id": i.(bson.ObjectId)}
+
+	case []bson.ObjectId:
+		return bson.M{"_id": bson.M{"$in": i.([]bson.ObjectId)}}
 
 	default:
 		return i
