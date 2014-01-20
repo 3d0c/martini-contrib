@@ -70,8 +70,18 @@ func copyStruct(v reflect.Value, t reflect.Type) reflect.Value {
 			continue
 		}
 
+		// This stuff is needed for correct encoding of expanded fields. See Expand method inside model package.
+		if isIfacePtrToStruct(v.Field(i)) {
+			result.Field(i).Set(copyStruct(v.Field(i).Elem().Elem(), v.Field(i).Elem().Elem().Type()))
+			continue
+		}
+
 		result.Field(i).Set(v.Field(i))
 	}
 
 	return result
+}
+
+func isIfacePtrToStruct(field reflect.Value) bool {
+	return field.Kind() == reflect.Interface && (field.Elem().Kind() == reflect.Ptr && field.Elem().Elem().Kind() == reflect.Struct)
 }
